@@ -1,359 +1,174 @@
-import { useState } from 'react';
-import { Plus, Trash2, ExternalLink, Search, File, Link as LinkIcon, FolderOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Trash2, Plus, X, Image as ImageIcon, File, Link as LinkIcon } from 'lucide-react';
 
-interface Resource {
+interface SavedFile {
   id: number;
-  title: string;
+  name: string;
+  type: 'document' | 'image' | 'link' | 'other';
   url: string;
-  type: 'file' | 'link';
-  subject: string;
-  description: string;
-  addedDate: string;
+  dateAdded: string;
 }
 
-export default function FileVault() {
-  const [resources, setResources] = useState<Resource[]>([
-    {
-      id: 1,
-      title: 'Calculus Study Guide',
-      url: 'https://example.com/calculus-guide.pdf',
-      type: 'file',
-      subject: 'Mathematics',
-      description: 'Comprehensive guide for derivatives and integrals',
-      addedDate: '2026-05-01',
-    },
-    {
-      id: 2,
-      title: 'Khan Academy - Physics',
-      url: 'https://khanacademy.org/physics',
-      type: 'link',
-      subject: 'Physics',
-      description: 'Video lectures and practice problems',
-      addedDate: '2026-05-02',
-    },
-    {
-      id: 3,
-      title: 'Biology Lab Notes',
-      url: 'https://example.com/bio-lab-notes.pdf',
-      type: 'file',
-      subject: 'Biology',
-      description: 'Notes from all lab sessions',
-      addedDate: '2026-04-28',
-    },
-    {
-      id: 4,
-      title: 'English Literature Resources',
-      url: 'https://literature.org/shakespeare',
-      type: 'link',
-      subject: 'Literature',
-      description: 'Shakespeare analysis and summaries',
-      addedDate: '2026-04-30',
-    },
-  ]);
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterSubject, setFilterSubject] = useState('All');
-  const [filterType, setFilterType] = useState<'all' | 'file' | 'link'>('all');
-
-  const [newResource, setNewResource] = useState({
-    title: '',
-    url: '',
-    type: 'link' as 'file' | 'link',
-    subject: 'General',
-    description: '',
+export default function Files() {
+  // 1. Data dikosongkan secara default (mulai dari array kosong [])
+  const [files, setFiles] = useState<SavedFile[]>(() => {
+    const savedFiles = localStorage.getItem('study_files');
+    if (savedFiles) return JSON.parse(savedFiles);
+    return []; 
   });
 
-  const subjects = ['All', ...Array.from(new Set(resources.map(r => r.subject)))];
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newFile, setNewFile] = useState({ name: '', type: 'document', url: '' });
 
-  const addResource = () => {
-    if (newResource.title && newResource.url) {
-      const resource: Resource = {
-        id: Date.now(),
-        ...newResource,
-        addedDate: new Date().toISOString().split('T')[0],
-      };
-      setResources([resource, ...resources]);
-      setNewResource({
-        title: '',
-        url: '',
-        type: 'link',
-        subject: 'General',
-        description: '',
-      });
-      setShowAddForm(false);
+  // 2. Simpan ke Local Storage setiap ada perubahan
+  useEffect(() => {
+    localStorage.setItem('study_files', JSON.stringify(files));
+  }, [files]);
+
+  const handleAddFile = () => {
+    if (newFile.name.trim() && newFile.url.trim()) {
+      const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      setFiles([...files, { 
+        id: Date.now(), 
+        name: newFile.name, 
+        type: newFile.type as SavedFile['type'], 
+        url: newFile.url,
+        dateAdded: date
+      }]);
+      setNewFile({ name: '', type: 'document', url: '' }); // Reset form
+      setShowAddForm(false); // Tutup form
     }
   };
 
-  const deleteResource = (id: number) => {
-    setResources(resources.filter(r => r.id !== id));
+  const handleDeleteFile = (id: number) => {
+    setFiles(files.filter(f => f.id !== id));
   };
 
-  const filteredResources = resources.filter(resource => {
-    const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = filterSubject === 'All' || resource.subject === filterSubject;
-    const matchesType = filterType === 'all' || resource.type === filterType;
-    return matchesSearch && matchesSubject && matchesType;
-  });
-
-  const fileCount = resources.filter(r => r.type === 'file').length;
-  const linkCount = resources.filter(r => r.type === 'link').length;
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'document': return <FileText className="w-8 h-8 text-blue-500" />;
+      case 'image': return <ImageIcon className="w-8 h-8 text-green-500" />;
+      case 'link': return <LinkIcon className="w-8 h-8 text-purple-500" />;
+      default: return <File className="w-8 h-8 text-gray-500" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="mb-2">File Vault</h2>
-          <p className="text-muted-foreground">Store and organize your study materials and resources</p>
+          <h2 className="text-2xl font-bold mb-1">File Vault</h2>
+          <p className="text-muted-foreground">Store your important study materials and links here.</p>
         </div>
-        <button
+        <button 
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity font-medium"
         >
-          <Plus className="w-5 h-5" />
-          Add Resource
+          {showAddForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          {showAddForm ? 'Cancel' : 'Add File / Link'}
         </button>
       </div>
 
-      {/* Add Resource Form */}
+      {/* Form Tambah File/Link */}
       {showAddForm && (
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="mb-4">Add New Resource</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm mb-2">Title</label>
-              <input
-                type="text"
-                value={newResource.title}
-                onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                placeholder="e.g., Calculus Study Guide"
-                className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        <div className="bg-card border border-border p-5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-4">
+          <h3 className="font-semibold border-b border-border pb-2">Add New Resource</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">File Name / Title</label>
+              <input 
+                type="text" 
+                placeholder="e.g., Math Formula PDF, Biology Video..." 
+                value={newFile.name}
+                onChange={(e) => setNewFile({...newFile, name: e.target.value})}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary"
               />
             </div>
-
-            <div>
-              <label className="block text-sm mb-2">URL</label>
-              <input
-                type="url"
-                value={newResource.url}
-                onChange={(e) => setNewResource({ ...newResource, url: e.target.value })}
-                placeholder="https://example.com/resource"
-                className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Resource Type</label>
+              <select 
+                value={newFile.type}
+                onChange={(e) => setNewFile({...newFile, type: e.target.value})}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary appearance-none"
+              >
+                <option value="document">Document (PDF, Word)</option>
+                <option value="image">Image / Photo</option>
+                <option value="link">Web Link / URL</option>
+                <option value="other">Other</option>
+              </select>
             </div>
-
-            <div>
-              <label className="block text-sm mb-2">Description</label>
-              <textarea
-                value={newResource.description}
-                onChange={(e) => setNewResource({ ...newResource, description: e.target.value })}
-                placeholder="Brief description of the resource..."
-                rows={3}
-                className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-sm font-medium text-muted-foreground">Link / URL (Google Drive, Dropbox, Website)</label>
+              <input 
+                type="text" 
+                placeholder="https://..." 
+                value={newFile.url}
+                onChange={(e) => setNewFile({...newFile, url: e.target.value})}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary"
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2">Subject</label>
-                <input
-                  type="text"
-                  value={newResource.subject}
-                  onChange={(e) => setNewResource({ ...newResource, subject: e.target.value })}
-                  placeholder="e.g., Mathematics"
-                  className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm mb-2">Type</label>
-                <select
-                  value={newResource.type}
-                  onChange={(e) => setNewResource({ ...newResource, type: e.target.value as 'file' | 'link' })}
-                  className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="link">Link</option>
-                  <option value="file">File</option>
-                </select>
-              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                *Since this is a web app, it's best to store your files in Google Drive and paste the link here.
+              </p>
             </div>
           </div>
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={addResource}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+          <div className="flex justify-end pt-2">
+            <button 
+              onClick={handleAddFile}
+              disabled={!newFile.name || !newFile.url}
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-opacity"
             >
-              Add Resource
-            </button>
-            <button
-              onClick={() => setShowAddForm(false)}
-              className="px-6 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-accent transition-colors"
-            >
-              Cancel
+              Save Resource
             </button>
           </div>
         </div>
       )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-2xl mb-1">{resources.length}</p>
-          <p className="text-sm text-muted-foreground">Total Resources</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-2xl mb-1">{fileCount}</p>
-          <p className="text-sm text-muted-foreground">Files</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-2xl mb-1">{linkCount}</p>
-          <p className="text-sm text-muted-foreground">Links</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-2xl mb-1">{subjects.length - 1}</p>
-          <p className="text-sm text-muted-foreground">Subjects</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search resources..."
-              className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <select
-            value={filterSubject}
-            onChange={(e) => setFilterSubject(e.target.value)}
-            className="px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {subjects.map(subject => (
-              <option key={subject} value={subject}>{subject}</option>
-            ))}
-          </select>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                filterType === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilterType('file')}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                filterType === 'file'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
-              }`}
-            >
-              Files
-            </button>
-            <button
-              onClick={() => setFilterType('link')}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                filterType === 'link'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
-              }`}
-            >
-              Links
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Resources Grid */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <h3 className="mb-4">Resources ({filteredResources.length})</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredResources.length === 0 ? (
-            <div className="col-span-2 text-center text-muted-foreground py-8">
-              No resources found
-            </div>
-          ) : (
-            filteredResources.map(resource => (
-              <div
-                key={resource.id}
-                className="p-4 rounded-lg border border-border hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={`p-2 rounded-lg ${
-                    resource.type === 'file' ? 'bg-primary/10' : 'bg-chart-2/20'
-                  }`}>
-                    {resource.type === 'file' ? (
-                      <File className="w-5 h-5 text-primary" />
-                    ) : (
-                      <LinkIcon className="w-5 h-5 text-chart-2" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="mb-1 truncate">{resource.title}</h4>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                      {resource.description}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs px-2 py-1 bg-secondary rounded-full">
-                        {resource.subject}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {resource.addedDate}
-                      </span>
-                    </div>
-                  </div>
+      
+      {/* Daftar File */}
+      {files.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {files.map(file => (
+            <div key={file.id} className="bg-card border border-border p-5 rounded-xl hover:border-primary hover:shadow-md transition-all group flex flex-col h-full">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-secondary rounded-lg">
+                  {getFileIcon(file.type)}
                 </div>
-
-                <div className="flex items-center gap-2 pt-3 border-t border-border">
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 px-3 py-2 bg-secondary hover:bg-accent text-secondary-foreground rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Open
-                  </a>
-                  <button
-                    onClick={() => deleteResource(resource.id)}
-                    className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </button>
-                </div>
+                <button 
+                  onClick={() => handleDeleteFile(file.id)}
+                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  title="Delete file"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            ))
-          )}
+              <h4 className="font-semibold text-foreground line-clamp-1 mb-1">{file.name}</h4>
+              <p className="text-xs text-muted-foreground mb-4">Added on {file.dateAdded}</p>
+              
+              <div className="mt-auto pt-4 border-t border-border">
+                <a 
+                  href={file.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                >
+                  <LinkIcon className="w-3 h-3" /> Open Resource
+                </a>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-
-      {/* Tips */}
-      <div className="bg-gradient-to-r from-primary/10 to-chart-2/10 border border-border rounded-xl p-6">
-        <div className="flex items-start gap-3">
-          <FolderOpen className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="mb-2">Organization Tips</h3>
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              <li>• Use clear, descriptive titles for easy searching</li>
-              <li>• Add detailed descriptions to help remember context</li>
-              <li>• Group resources by subject for better organization</li>
-              <li>• Regularly review and remove outdated materials</li>
-            </ul>
+      ) : (
+        !showAddForm && (
+          <div className="text-center py-20 border border-dashed border-border rounded-2xl flex flex-col items-center justify-center">
+            <div className="p-4 bg-secondary rounded-full mb-4">
+              <File className="w-8 h-8 text-muted-foreground opacity-50" />
+            </div>
+            <h3 className="text-lg font-medium mb-1">Your vault is empty</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              You haven't saved any files or links yet. Click the "Add File / Link" button to start organizing your study materials.
+            </p>
           </div>
-        </div>
-      </div>
+        )
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ interface ClassItem {
   subject: string;
   time: string;
   room: string;
-  professor: string;
+  teacher: string;
   day: string;
   color: string;
 }
@@ -37,7 +37,7 @@ export default function ClassSchedule() {
     subject: '',
     time: '',
     room: '',
-    professor: '',
+    teacher: '',
     day: 'Monday',
     color: '#8b6f47',
   });
@@ -53,7 +53,7 @@ export default function ClassSchedule() {
         subject: '',
         time: '',
         room: '',
-        professor: '',
+        teacher: '',
         day: 'Monday',
         color: '#8b6f47',
       });
@@ -92,7 +92,7 @@ export default function ClassSchedule() {
                 type="text"
                 value={newClass.subject}
                 onChange={(e) => setNewClass({ ...newClass, subject: e.target.value })}
-                placeholder="e.g., Mathematics"
+                placeholder="e.g., Computer Science"
                 className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -103,7 +103,7 @@ export default function ClassSchedule() {
                 type="text"
                 value={newClass.time}
                 onChange={(e) => setNewClass({ ...newClass, time: e.target.value })}
-                placeholder="e.g., 09:00 - 10:30"
+                placeholder="e.g., 10:20 - 11:40"
                 className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -114,18 +114,18 @@ export default function ClassSchedule() {
                 type="text"
                 value={newClass.room}
                 onChange={(e) => setNewClass({ ...newClass, room: e.target.value })}
-                placeholder="e.g., Room 301"
+                placeholder="e.g., Class 11.3"
                 className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2">Professor</label>
+              <label className="block text-sm mb-2">Teacher</label>
               <input
                 type="text"
-                value={newClass.professor}
-                onChange={(e) => setNewClass({ ...newClass, professor: e.target.value })}
-                placeholder="e.g., Dr. Smith"
+                value={newClass.teacher}
+                onChange={(e) => setNewClass({ ...newClass, teacher: e.target.value })}
+                placeholder="e.g., Mr. Dwi"
                 className="w-full px-4 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -215,7 +215,7 @@ export default function ClassSchedule() {
                           <MapPin className="w-3 h-3" />
                           {classItem.room}
                         </p>
-                        <p className="text-xs text-muted-foreground">{classItem.professor}</p>
+                        <p className="text-xs text-muted-foreground">{classItem.teacher}</p>
                       </div>
                     </div>
                   ))}
@@ -255,7 +255,7 @@ export default function ClassSchedule() {
                     {classItem.room}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {classItem.professor}
+                    {classItem.teacher}
                   </div>
                 </div>
                 <button

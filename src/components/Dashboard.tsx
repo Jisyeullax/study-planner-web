@@ -51,8 +51,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     <div className="space-y-8">
       {/* Header Welcome */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-1 text-foreground">Halo, Jihan! 👋</h1>
-        <p className="text-muted-foreground">Ini adalah ringkasan rencana belajarmu hari ini.</p>
+        <h1 className="text-3xl font-bold tracking-tight mb-1 text-foreground">Hi there! 👋</h1>
+        <p className="text-muted-foreground">Here's your study summary for today.</p>
       </div>
 
       {/* --- GRID STATISTIK UTAMA (Menjadi 3 Kolom) --- */}
@@ -67,7 +67,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-2xl font-bold text-foreground">{pendingTasks.length}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">Tugas Tertunda</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pending Tasks</p>
         </div>
 
         {/* Card Notes */}
@@ -79,7 +79,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="p-2 bg-chart-3/10 text-chart-3 rounded-xl"><BookOpen className="w-5 h-5" /></div>
           </div>
           <div className="text-2xl font-bold text-foreground">{totalNotes}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">Catatan Tersimpan</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Saved Notes</p>
         </div>
 
         {/* Card Flashcards */}
@@ -91,7 +91,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="p-2 bg-chart-2/10 text-chart-2 rounded-xl"><Layers className="w-5 h-5" /></div>
           </div>
           <div className="text-2xl font-bold text-foreground">{flashcards.length}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">{totalFolders} Folder Flashcard</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{totalFolders} Flashcard Folders</p>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" /> Jadwal Hari Ini
+              <Calendar className="w-5 h-5 text-primary" /> Today's Schedule
             </h3>
             <button onClick={() => onNavigate('schedule')} className="text-xs text-primary font-medium hover:underline">Lihat Semua</button>
           </div>
@@ -122,7 +122,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               ))
             ) : (
               <div className="text-center py-6 border border-dashed border-border rounded-xl">
-                <p className="text-sm text-muted-foreground">Tidak ada jadwal kelas untuk hari ini 🎉</p>
+                <p className="text-sm text-muted-foreground">There are no class schedules for today 🎉</p>
               </div>
             )}
           </div>
@@ -132,7 +132,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-primary" /> Tugas Mendatang
+              <CheckSquare className="w-5 h-5 text-primary" /> Upcoming Tasks
             </h3>
             <button onClick={() => onNavigate('todo')} className="text-xs text-primary font-medium hover:underline">Kelola Tugas</button>
           </div>
@@ -160,7 +160,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               ))
             ) : (
               <div className="text-center py-6 border border-dashed border-border rounded-xl">
-                <p className="text-sm text-muted-foreground">Hebat! Semua tugasmu sudah selesai 👍</p>
+                <p className="text-sm text-muted-foreground">Awesome! You've completed all your tasks 👍</p>
               </div>
             )}
           </div>
@@ -173,11 +173,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
           <div className="flex-1 min-w-0 text-sm">
-            <span className="font-semibold text-destructive">Ujian Terdekat: </span>
-            <span className="text-foreground font-medium">{exams[0].subject}</span> pada {exams[0].date}
+            <span className="font-semibold text-destructive">Upcoming Exams: </span>
+            <span className="text-foreground font-medium">{exams[0].subject}</span> on {exams[0].date}
           </div>
           <button onClick={() => onNavigate('exams')} className="text-xs bg-destructive/10 text-destructive px-3 py-1.5 rounded-xl hover:bg-destructive/20 font-medium whitespace-nowrap transition-colors">
-            Lihat Detail
+            View Details
           </button>
         </div>
       )}
