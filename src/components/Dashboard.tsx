@@ -1,166 +1,147 @@
 import { useState, useEffect } from 'react';
-import { 
-  CheckSquare, BookOpen, Layers, Clock, Calendar, 
-  ArrowRight, AlertCircle 
-} from 'lucide-react';
+import { CheckSquare, BookOpen, Layers, Calendar, ListTodo, TrendingUp } from 'lucide-react';
 
-interface DashboardProps {
-  onNavigate: (view: string) => void;
-}
-
-export default function Dashboard({ onNavigate }: DashboardProps) {
-  // --- 1. AMBIL DATA DARI LOCAL STORAGE (Tanpa Grades) ---
+export default function Dashboard() {
+  // 1. Mengambil data dari Local Storage
   const [tasks, setTasks] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [flashcards, setFlashcards] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
 
   useEffect(() => {
     setTasks(JSON.parse(localStorage.getItem('study_tasks') || '[]'));
     setNotes(JSON.parse(localStorage.getItem('study_notes') || '[]'));
     setFlashcards(JSON.parse(localStorage.getItem('study_flashcards') || '[]'));
-    setClasses(JSON.parse(localStorage.getItem('study_classes') || '[]'));
-    setExams(JSON.parse(localStorage.getItem('study_exams') || '[]'));
+    setSchedule(JSON.parse(localStorage.getItem('study_schedule') || '[]'));
   }, []);
 
-  // --- 2. FUNGSI UNTUK CHECKLIST TUGAS DARI DASHBOARD ---
-  const toggleTask = (id: number) => {
-    // Ubah status completed pada task yang diklik
-    const updatedTasks = tasks.map(t => 
-      t.id === id ? { ...t, completed: !t.completed } : t
-    );
-    
-    // Perbarui state di Dashboard
-    setTasks(updatedTasks);
-    
-    // Simpan langsung ke brankas browser agar halaman TodoList juga ikut terupdate
-    localStorage.setItem('study_tasks', JSON.stringify(updatedTasks));
-  };
+  // 2. Logika Kalkulasi Data
+  const pendingTasks = tasks.filter(t => !t.completed).length;
+  const savedNotes = notes.length;
+  const flashcardFolders = new Set(flashcards.map(f => f.folder)).size;
 
-  // --- 3. LOGIKA KALKULASI STATISTIK ---
-  const pendingTasks = tasks.filter(t => !t.completed);
-  const totalNotes = notes.length;
-  const totalFolders = Array.from(new Set(flashcards.map(f => f.folder))).length;
-  
-  const daysInEnglish = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const todayName = daysInEnglish[new Date().getDay()];
-  const todayClasses = classes.filter(c => c.day === todayName);
+  // Kalkulasi Progress Tugas Hari Ini
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Batasi tampilan list maksimal 3 item
+  const upcomingTasks = tasks.filter(t => !t.completed).slice(0, 3);
+  const todaysSchedule = schedule.slice(0, 3);
 
   return (
-    <div className="space-y-8">
-      {/* Header Welcome */}
+    <div className="space-y-8 pb-10 animate-in fade-in duration-500">
+      
+      {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-1 text-foreground">Hi there! 👋</h1>
-        <p className="text-muted-foreground">Here's your study summary for today.</p>
+        <h2 className="text-3xl font-bold mb-2 flex items-center gap-2">
+          Hi there! 👋
+        </h2>
+        <p className="text-muted-foreground">Here is the summary of your study plan today.</p>
       </div>
 
-      {/* --- GRID STATISTIK UTAMA (Menjadi 3 Kolom) --- */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card Tasks */}
-        <div 
-          onClick={() => onNavigate('todo')} 
-          className="bg-card border border-border p-5 rounded-2xl cursor-pointer hover:border-primary hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-primary/10 rounded-xl text-primary"><CheckSquare className="w-5 h-5" /></div>
-            <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" />
+      {/* TOP ROW: QUICK STATS (Sekarang menjadi 4 Kolom) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        {/* 1. Pending Tasks */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col justify-center">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <CheckSquare className="w-5 h-5 text-primary" />
           </div>
-          <div className="text-2xl font-bold text-foreground">{pendingTasks.length}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">Pending Tasks</p>
+          <p className="text-3xl font-bold">{pendingTasks}</p>
+          <p className="text-sm text-muted-foreground mt-1">Pending Tasks</p>
         </div>
 
-        {/* Card Notes */}
-        <div 
-          onClick={() => onNavigate('notes')} 
-          className="bg-card border border-border p-5 rounded-2xl cursor-pointer hover:border-primary hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-chart-3/10 text-chart-3 rounded-xl"><BookOpen className="w-5 h-5" /></div>
+        {/* 2. Saved Notes */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col justify-center">
+          <div className="w-10 h-10 bg-chart-2/10 rounded-lg flex items-center justify-center mb-4">
+            <BookOpen className="w-5 h-5 text-chart-2" />
           </div>
-          <div className="text-2xl font-bold text-foreground">{totalNotes}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">Saved Notes</p>
+          <p className="text-3xl font-bold">{savedNotes}</p>
+          <p className="text-sm text-muted-foreground mt-1">Saved Notes</p>
         </div>
 
-        {/* Card Flashcards */}
-        <div 
-          onClick={() => onNavigate('flashcards')} 
-          className="bg-card border border-border p-5 rounded-2xl cursor-pointer hover:border-primary hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-chart-2/10 text-chart-2 rounded-xl"><Layers className="w-5 h-5" /></div>
+        {/* 3. Flashcard Folders */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col justify-center">
+          <div className="w-10 h-10 bg-chart-4/10 rounded-lg flex items-center justify-center mb-4">
+            <Layers className="w-5 h-5 text-chart-4" />
           </div>
-          <div className="text-2xl font-bold text-foreground">{flashcards.length}</div>
-          <p className="text-xs text-muted-foreground mt-0.5">{totalFolders} Flashcard Folders</p>
+          <p className="text-3xl font-bold">{flashcardFolders}</p>
+          <p className="text-sm text-muted-foreground mt-1">Flashcard Folders</p>
+        </div>
+
+        {/* 4. Today's Progress (Kolom Baru) */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col justify-center">
+          <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
+            <TrendingUp className="w-5 h-5 text-amber-500" />
+          </div>
+          <p className="text-3xl font-bold">{taskCompletionRate}%</p>
+          <p className="text-sm text-muted-foreground mt-1">Today's Progress</p>
         </div>
       </div>
 
-      {/* --- KONTEN SPLIT --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* BOTTOM ROW: SCHEDULE & TASKS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Sisi Kiri: Jadwal Hari Ini */}
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg flex items-center gap-2">
+        {/* Today's Schedule */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" /> Today's Schedule
             </h3>
-            <button onClick={() => onNavigate('schedule')} className="text-xs text-primary font-medium hover:underline">Lihat Semua</button>
+            <span className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+              View All
+            </span>
           </div>
 
-          <div className="space-y-3">
-            {todayClasses.length > 0 ? (
-              todayClasses.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-border/50">
-                  <div className="w-3 h-10 rounded-full" style={{ backgroundColor: c.color || '#000' }} />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm text-foreground truncate">{c.subject}</h4>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3 h-3" /> {c.time} | {c.room}
-                    </p>
+          <div className="flex-1 flex flex-col">
+            {todaysSchedule.length > 0 ? (
+              <div className="space-y-3">
+                {todaysSchedule.map((item, index) => (
+                  <div key={index} className="p-3 bg-secondary rounded-lg border border-border/50">
+                    <p className="font-medium text-sm">{item.title || item.subject}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.time || 'Time not set'}</p>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6 border border-dashed border-border rounded-xl">
-                <p className="text-sm text-muted-foreground">There are no class schedules for today 🎉</p>
+              <div className="flex-1 flex items-center justify-center py-8 border border-dashed border-border rounded-xl bg-secondary/30">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  No classes scheduled for today ☕
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Sisi Kanan: Tugas Mendatang (Sekarang Bisa di-Checklist) */}
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-primary" /> Upcoming Tasks
+        {/* Upcoming Tasks */}
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-chart-2" /> Upcoming Tasks
             </h3>
-            <button onClick={() => onNavigate('todo')} className="text-xs text-primary font-medium hover:underline">Kelola Tugas</button>
+            <span className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+              Manage Tasks
+            </span>
           </div>
 
-          <div className="space-y-3">
-            {pendingTasks.length > 0 ? (
-              pendingTasks.slice(0, 4).map((task) => (
-                <div key={task.id} className="p-3 bg-muted/10 border border-border rounded-xl flex items-start gap-3 hover:bg-muted/30 transition-colors">
-                  {/* Checkbox Interaktif ditambahkan di sini */}
-                  <input 
-                    type="checkbox" 
-                    checked={task.completed} 
-                    onChange={() => toggleTask(task.id)} 
-                    className="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer" 
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm text-foreground truncate">{task.title}</h4>
-                    {task.dueDate && (
-                      <span className={`text-[11px] mt-0.5 inline-block px-1.5 py-0.5 rounded ${task.priority === 'high' ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'}`}>
-                        DL: {task.dueDate}
-                      </span>
-                    )}
+          <div className="flex-1 flex flex-col">
+            {upcomingTasks.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingTasks.map((task, index) => (
+                  <div key={index} className="p-3 bg-secondary rounded-lg border border-border/50 flex items-center gap-3">
+                    <div className="w-4 h-4 rounded border border-primary/50"></div>
+                    <div>
+                      <p className="font-medium text-sm">{task.title || task.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{task.subject || 'General'}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6 border border-dashed border-border rounded-xl">
-                <p className="text-sm text-muted-foreground">Awesome! You've completed all your tasks 👍</p>
+              <div className="flex-1 flex items-center justify-center py-8 border border-dashed border-border rounded-xl bg-secondary/30">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  Great! All your tasks are completed 👍
+                </p>
               </div>
             )}
           </div>
@@ -168,19 +149,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       </div>
 
-      {/* --- LIVE COUNTDOWN UJIAN --- */}
-      {exams.length > 0 && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
-          <div className="flex-1 min-w-0 text-sm">
-            <span className="font-semibold text-destructive">Upcoming Exams: </span>
-            <span className="text-foreground font-medium">{exams[0].subject}</span> on {exams[0].date}
-          </div>
-          <button onClick={() => onNavigate('exams')} className="text-xs bg-destructive/10 text-destructive px-3 py-1.5 rounded-xl hover:bg-destructive/20 font-medium whitespace-nowrap transition-colors">
-            View Details
-          </button>
-        </div>
-      )}
     </div>
   );
 }
