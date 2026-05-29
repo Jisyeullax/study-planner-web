@@ -23,7 +23,7 @@ export default function Dashboard() {
     const done = storedTasks.filter((t: any) => t.completed);
     setDashboardTasks([...pending, ...done].slice(0, 4));
 
-    // PERBAIKAN: Timer sekarang berjalan setiap 1 detik (1000ms) agar waktu 100% akurat dan real-time
+    // Update waktu setiap 1 detik
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -50,34 +50,60 @@ export default function Dashboard() {
 
   const todaysSchedule = schedule.slice(0, 3);
 
-  // --- KALKULASI EXAM COUNTDOWN YANG DIPERBAIKI ---
+  // --- MESIN PEMROSESAN TANGGAL & WAKTU (SUPER PRESISI) ---
+  const processExamDate = (exam: any) => {
+    if (!exam || !exam.date) return new Date();
+    
+    // Cek apakah tanggal sudah mengandung jam bawaan (ISO format)
+    const hasTimeInDate = typeof exam.date === 'string' && exam.date.includes('T');
+    let examDate = new Date(exam.date);
+
+    // Memecah "YYYY-MM-DD" agar tidak kena bug UTC (Zona waktu bergeser ke 07:00 pagi)
+    if (!hasTimeInDate && typeof exam.date === 'string') {
+      const [year, month, day] = exam.date.split('-').map(Number);
+      examDate = new Date(year, month - 1, day);
+    }
+
+    // Jika user menginput jam terpisah (misal exam.time = "09:30")
+    if (exam.time && typeof exam.time === 'string') {
+      const [hours, minutes] = exam.time.split(':').map(Number);
+      examDate.setHours(hours, minutes, 0, 0);
+    } else if (!hasTimeInDate) {
+      // Jika tidak ada input jam sama sekali, jadikan jam 23:59 (Tengah Malam)
+      examDate.setHours(23, 59, 59, 999);
+    }
+    
+    return examDate;
+  };
+
+  // Memfilter & Mengurutkan Ujian
   const upcomingExams = exams
+    .map(exam => ({
+      ...exam,
+      actualDate: processExamDate(exam)
+    }))
     .filter(exam => {
-      const examDate = new Date(exam.date);
-      // Mengecek apakah ujian masih di masa depan ATAU berada di hari yang sama dengan hari ini
-      return examDate.getTime() >= now.getTime() || examDate.toDateString() === now.toDateString();
+      // Tampilkan jika ujian ada di masa depan ATAU masih di hari yang sama dengan hari ini
+      return exam.actualDate.getTime() >= now.getTime() || exam.actualDate.toDateString() === now.toDateString();
     })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => a.actualDate.getTime() - b.actualDate.getTime());
 
   const nearestExam = upcomingExams.length > 0 ? upcomingExams[0] : null;
 
-  const getCountdownData = (dateString: string) => {
-    const examDate = new Date(dateString);
-    
-    // PERBAIKAN: Menghapus logika manipulasi waktu. Sekarang murni menggunakan waktu yang disimpan!
-    const diff = examDate.getTime() - now.getTime();
+  const getCountdownData = (actualDate: Date) => {
+    const diff = actualDate.getTime() - now.getTime();
 
-    // Jika waktu sudah habis (minus)
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0 };
+    // Jika waktu tersisa 0 atau minus, berarti sudah mulai/lewat
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, isPassed: true };
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / 1000 / 60) % 60);
 
-    return { days, hours, minutes };
+    return { days, hours, minutes, isPassed: false };
   };
 
-  const countdown = nearestExam ? getCountdownData(nearestExam.date) : null;
+  const countdown = nearestExam ? getCountdownData(nearestExam.actualDate) : null;
 
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-500">
@@ -199,7 +225,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 3. Nearest Exam Countdown */}
+        {/* 3. Nearest Exam Countdown (Super Akurat) */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -218,7 +244,11 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold text-destructive uppercase tracking-widest mb-2">Countdown</p>
                   
                   <div className="h-20 flex items-center justify-center mb-2">
-                    {countdown.days > 0 ? (
+                    {countdown.isPassed ? (
+                       <span className="text-3xl sm:text-4xl font-bold text-destructive animate-pulse tracking-tighter">
+                         EXAM STARTED!
+                       </span>
+                    ) : countdown.days > 0 ? (
                       <div className="flex items-baseline gap-2">
                         <span className="text-6xl font-bold text-foreground tracking-tighter">
                           {countdown.days}
@@ -228,13 +258,13 @@ export default function Dashboard() {
                     ) : (
                       <div className="flex items-baseline gap-4">
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-5xl font-bold tracking-tighter ${countdown.hours === 0 && countdown.minutes === 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                          <span className="text-5xl font-bold tracking-tighter text-foreground">
                             {String(countdown.hours).padStart(2, '0')}
                           </span>
                           <span className="text-lg font-medium text-muted-foreground">h</span>
                         </div>
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-5xl font-bold tracking-tighter ${countdown.hours === 0 && countdown.minutes === 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                          <span className="text-5xl font-bold tracking-tighter text-foreground">
                             {String(countdown.minutes).padStart(2, '0')}
                           </span>
                           <span className="text-lg font-medium text-muted-foreground">m</span>
@@ -246,7 +276,8 @@ export default function Dashboard() {
                   <div className="bg-background px-4 py-2 rounded-lg border border-border inline-block shadow-sm w-full max-w-[200px] truncate">
                     <p className="font-bold text-foreground text-sm truncate">{nearestExam.subject || nearestExam.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(nearestExam.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {nearestExam.actualDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {nearestExam.time && ` • ${nearestExam.time}`}
                     </p>
                   </div>
                 </div>
