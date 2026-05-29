@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import { CheckSquare, BookOpen, Layers, Calendar, ListTodo, TrendingUp, Clock, Square } from 'lucide-react';
 
 export default function Dashboard() {
-  // 1. Mengambil data dari Local Storage
   const [tasks, setTasks] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [flashcards, setFlashcards] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   
-  // State khusus untuk menahan tugas agar tidak langsung menghilang saat dicentang
   const [dashboardTasks, setDashboardTasks] = useState<any[]>([]);
   const [now, setNow] = useState(new Date());
 
@@ -25,11 +23,11 @@ export default function Dashboard() {
     const done = storedTasks.filter((t: any) => t.completed);
     setDashboardTasks([...pending, ...done].slice(0, 4));
 
-    const timer = setInterval(() => setNow(new Date()), 60000);
+    // PERBAIKAN: Timer sekarang berjalan setiap 1 detik (1000ms) agar waktu 100% akurat dan real-time
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // --- FUNGSI INTERAKTIF ---
   const handleToggleTask = (taskId: number) => {
     const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
@@ -42,7 +40,6 @@ export default function Dashboard() {
     ));
   };
 
-  // --- KALKULASI DATA UMUM ---
   const pendingTasks = tasks.filter(t => !t.completed).length;
   const savedNotes = notes.length;
   const flashcardFolders = new Set(flashcards.map(f => f.folder)).size;
@@ -53,11 +50,11 @@ export default function Dashboard() {
 
   const todaysSchedule = schedule.slice(0, 3);
 
-  // --- KALKULASI EXAM COUNTDOWN ---
+  // --- KALKULASI EXAM COUNTDOWN YANG DIPERBAIKI ---
   const upcomingExams = exams
     .filter(exam => {
       const examDate = new Date(exam.date);
-      // Tetap tampilkan jika hari ini
+      // Mengecek apakah ujian masih di masa depan ATAU berada di hari yang sama dengan hari ini
       return examDate.getTime() >= now.getTime() || examDate.toDateString() === now.toDateString();
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -67,15 +64,10 @@ export default function Dashboard() {
   const getCountdownData = (dateString: string) => {
     const examDate = new Date(dateString);
     
-    // Logika Cerdas: Jika user hanya memasukkan tanggal (jam 00:00), 
-    // ubah ke akhir hari (23:59) agar countdown tetap berjalan sampai malam.
-    if (examDate.getHours() === 0 && examDate.getMinutes() === 0) {
-      examDate.setHours(23, 59, 59);
-    }
-
+    // PERBAIKAN: Menghapus logika manipulasi waktu. Sekarang murni menggunakan waktu yang disimpan!
     const diff = examDate.getTime() - now.getTime();
 
-    // Jika waktu sudah benar-benar habis
+    // Jika waktu sudah habis (minus)
     if (diff <= 0) return { days: 0, hours: 0, minutes: 0 };
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -207,7 +199,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 3. Nearest Exam Countdown (Live Timer with H and M) */}
+        {/* 3. Nearest Exam Countdown */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
