@@ -7,27 +7,45 @@ export default function Dashboard() {
   const [notes, setNotes] = useState<any[]>([]);
   const [flashcards, setFlashcards] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]); // Tambahan state untuk Ujian
+  const [exams, setExams] = useState<any[]>([]);
+  
+  // State khusus untuk menahan tugas agar tidak langsung menghilang saat dicentang
+  const [dashboardTasks, setDashboardTasks] = useState<any[]>([]);
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    setTasks(JSON.parse(localStorage.getItem('study_tasks') || '[]'));
+    const storedTasks = JSON.parse(localStorage.getItem('study_tasks') || '[]');
+    setTasks(storedTasks);
     setNotes(JSON.parse(localStorage.getItem('study_notes') || '[]'));
     setFlashcards(JSON.parse(localStorage.getItem('study_flashcards') || '[]'));
     setSchedule(JSON.parse(localStorage.getItem('study_schedule') || '[]'));
     setExams(JSON.parse(localStorage.getItem('study_exams') || '[]'));
+
+    // Susun tugas: Prioritaskan yang belum selesai, lalu ambil 4 teratas untuk Dashboard
+    const pending = storedTasks.filter((t: any) => !t.completed);
+    const done = storedTasks.filter((t: any) => t.completed);
+    setDashboardTasks([...pending, ...done].slice(0, 4));
+
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
   // --- FUNGSI INTERAKTIF ---
-  // Fungsi untuk menandai tugas selesai langsung dari Dashboard
   const handleToggleTask = (taskId: number) => {
+    // 1. Update data permanen di brankas (Local Storage)
     const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
     setTasks(updatedTasks);
     localStorage.setItem('study_tasks', JSON.stringify(updatedTasks));
+
+    // 2. Update tampilan dashboard SAJA (ubah statusnya, tapi jangan pindahkan posisinya)
+    setDashboardTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
   };
 
-  // --- KALKULASI DATA ---
+  // --- KALKULASI DATA UMUM ---
   const pendingTasks = tasks.filter(t => !t.completed).length;
   const savedNotes = notes.length;
   const flashcardFolders = new Set(flashcards.map(f => f.folder)).size;
@@ -36,33 +54,32 @@ export default function Dashboard() {
   const completedTasks = tasks.filter(t => t.completed).length;
   const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Batasi tampilan list maksimal 3-4 item
-  const upcomingTasks = tasks.filter(t => !t.completed).slice(0, 4);
   const todaysSchedule = schedule.slice(0, 3);
 
   // --- KALKULASI EXAM COUNTDOWN ---
-  // Mencari ujian yang belum lewat dari hari ini
   const upcomingExams = exams
     .filter(exam => {
       const examDate = new Date(exam.date);
-      const today = new Date();
-      examDate.setHours(0, 0, 0, 0);
-      today.setHours(0, 0, 0, 0);
-      return examDate.getTime() >= today.getTime();
+      return examDate.getTime() >= now.getTime() || examDate.toDateString() === now.toDateString();
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // Mengambil 1 ujian terdekat
   const nearestExam = upcomingExams.length > 0 ? upcomingExams[0] : null;
 
-  const getDaysLeft = (dateString: string) => {
+  const getCountdownData = (dateString: string) => {
     const examDate = new Date(dateString);
-    const today = new Date();
-    examDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const diffTime = examDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diff = examDate.getTime() - now.getTime();
+
+    if (diff <= 0) return { isToday: true, days: 0, hours: 0, minutes: 0 };
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / 1000 / 60) % 60);
+
+    return { isToday: false, days, hours, minutes };
   };
+
+  const countdown = nearestExam ? getCountdownData(nearestExam.date) : null;
 
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-500">
@@ -110,7 +127,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* BOTTOM ROW: SCHEDULE, TASKS, EXAM (Menjadi 3 Kolom) */}
+      {/* BOTTOM ROW: SCHEDULE, TASKS, EXAM */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* 1. Today's Schedule */}
@@ -141,7 +158,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 2. Upcoming Tasks (Sekarang Interaktif) */}
+        {/* 2. Upcoming Tasks (Dengan Fitur Coret Selesai) */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -150,19 +167,26 @@ export default function Dashboard() {
           </div>
 
           <div className="flex-1 flex flex-col">
-            {upcomingTasks.length > 0 ? (
+            {dashboardTasks.length > 0 ? (
               <div className="space-y-3">
-                {upcomingTasks.map((task) => (
-                  <div key={task.id} className="p-3 bg-secondary rounded-lg border border-border/50 flex items-start gap-3 group transition-colors hover:border-primary/50">
+                {dashboardTasks.map((task) => (
+                  <div 
+                    key={task.id} 
+                    className={`p-3 bg-secondary rounded-lg border border-border/50 flex items-start gap-3 group transition-all duration-300 ${task.completed ? 'opacity-60' : 'hover:border-primary/50'}`}
+                  >
                     <button 
                       onClick={() => handleToggleTask(task.id)}
-                      className="mt-0.5 text-muted-foreground hover:text-primary transition-colors focus:outline-none"
+                      className={`mt-0.5 transition-colors focus:outline-none ${task.completed ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
                     >
-                      <Square className="w-5 h-5" />
+                      {task.completed ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                     </button>
                     <div>
-                      <p className="font-medium text-sm text-foreground">{task.title || task.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{task.subject || 'General'}</p>
+                      <p className={`font-medium text-sm transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                        {task.title || task.name}
+                      </p>
+                      <p className={`text-xs mt-0.5 transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                        {task.subject || 'General'}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -177,7 +201,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 3. Nearest Exam Countdown (Modul Baru) */}
+        {/* 3. Nearest Exam Countdown */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -186,23 +210,43 @@ export default function Dashboard() {
           </div>
 
           <div className="flex-1 flex flex-col">
-            {nearestExam ? (
+            {nearestExam && countdown ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-destructive/5 rounded-xl border border-destructive/20 relative overflow-hidden">
-                {/* Latar Belakang Dekoratif */}
                 <div className="absolute -right-6 -top-6 text-destructive/5 rotate-12">
                   <Clock className="w-32 h-32" />
                 </div>
                 
-                <div className="relative z-10">
+                <div className="relative z-10 w-full">
                   <p className="text-sm font-semibold text-destructive uppercase tracking-widest mb-2">Countdown</p>
-                  <div className="flex items-baseline justify-center gap-1 mb-4">
-                    <span className="text-6xl font-bold text-foreground tracking-tighter">
-                      {getDaysLeft(nearestExam.date)}
-                    </span>
-                    <span className="text-xl font-medium text-muted-foreground">Days</span>
+                  
+                  <div className="h-20 flex items-center justify-center mb-2">
+                    {countdown.isToday ? (
+                      <span className="text-5xl font-bold text-destructive animate-pulse tracking-tighter">
+                        TODAY!
+                      </span>
+                    ) : countdown.days > 0 ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-6xl font-bold text-foreground tracking-tighter">
+                          {countdown.days}
+                        </span>
+                        <span className="text-xl font-medium text-muted-foreground">Days</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-4">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-5xl font-bold text-foreground tracking-tighter">{countdown.hours}</span>
+                          <span className="text-lg font-medium text-muted-foreground">h</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-5xl font-bold text-foreground tracking-tighter">{countdown.minutes}</span>
+                          <span className="text-lg font-medium text-muted-foreground">m</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="bg-background px-4 py-2 rounded-lg border border-border inline-block shadow-sm">
-                    <p className="font-bold text-foreground text-sm">{nearestExam.subject || nearestExam.title}</p>
+
+                  <div className="bg-background px-4 py-2 rounded-lg border border-border inline-block shadow-sm w-full max-w-[200px] truncate">
+                    <p className="font-bold text-foreground text-sm truncate">{nearestExam.subject || nearestExam.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {new Date(nearestExam.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
