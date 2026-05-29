@@ -21,7 +21,6 @@ export default function Dashboard() {
     setSchedule(JSON.parse(localStorage.getItem('study_schedule') || '[]'));
     setExams(JSON.parse(localStorage.getItem('study_exams') || '[]'));
 
-    // Susun tugas: Prioritaskan yang belum selesai, lalu ambil 4 teratas untuk Dashboard
     const pending = storedTasks.filter((t: any) => !t.completed);
     const done = storedTasks.filter((t: any) => t.completed);
     setDashboardTasks([...pending, ...done].slice(0, 4));
@@ -32,14 +31,12 @@ export default function Dashboard() {
 
   // --- FUNGSI INTERAKTIF ---
   const handleToggleTask = (taskId: number) => {
-    // 1. Update data permanen di brankas (Local Storage)
     const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
     setTasks(updatedTasks);
     localStorage.setItem('study_tasks', JSON.stringify(updatedTasks));
 
-    // 2. Update tampilan dashboard SAJA (ubah statusnya, tapi jangan pindahkan posisinya)
     setDashboardTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, completed: !task.completed } : task
     ));
@@ -60,6 +57,7 @@ export default function Dashboard() {
   const upcomingExams = exams
     .filter(exam => {
       const examDate = new Date(exam.date);
+      // Tetap tampilkan jika hari ini
       return examDate.getTime() >= now.getTime() || examDate.toDateString() === now.toDateString();
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -68,15 +66,23 @@ export default function Dashboard() {
 
   const getCountdownData = (dateString: string) => {
     const examDate = new Date(dateString);
+    
+    // Logika Cerdas: Jika user hanya memasukkan tanggal (jam 00:00), 
+    // ubah ke akhir hari (23:59) agar countdown tetap berjalan sampai malam.
+    if (examDate.getHours() === 0 && examDate.getMinutes() === 0) {
+      examDate.setHours(23, 59, 59);
+    }
+
     const diff = examDate.getTime() - now.getTime();
 
-    if (diff <= 0) return { isToday: true, days: 0, hours: 0, minutes: 0 };
+    // Jika waktu sudah benar-benar habis
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0 };
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / 1000 / 60) % 60);
 
-    return { isToday: false, days, hours, minutes };
+    return { days, hours, minutes };
   };
 
   const countdown = nearestExam ? getCountdownData(nearestExam.date) : null;
@@ -158,7 +164,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 2. Upcoming Tasks (Dengan Fitur Coret Selesai) */}
+        {/* 2. Upcoming Tasks */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -201,7 +207,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 3. Nearest Exam Countdown */}
+        {/* 3. Nearest Exam Countdown (Live Timer with H and M) */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -220,11 +226,7 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold text-destructive uppercase tracking-widest mb-2">Countdown</p>
                   
                   <div className="h-20 flex items-center justify-center mb-2">
-                    {countdown.isToday ? (
-                      <span className="text-5xl font-bold text-destructive animate-pulse tracking-tighter">
-                        TODAY!
-                      </span>
-                    ) : countdown.days > 0 ? (
+                    {countdown.days > 0 ? (
                       <div className="flex items-baseline gap-2">
                         <span className="text-6xl font-bold text-foreground tracking-tighter">
                           {countdown.days}
@@ -234,11 +236,15 @@ export default function Dashboard() {
                     ) : (
                       <div className="flex items-baseline gap-4">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-5xl font-bold text-foreground tracking-tighter">{countdown.hours}</span>
+                          <span className={`text-5xl font-bold tracking-tighter ${countdown.hours === 0 && countdown.minutes === 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                            {String(countdown.hours).padStart(2, '0')}
+                          </span>
                           <span className="text-lg font-medium text-muted-foreground">h</span>
                         </div>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-5xl font-bold text-foreground tracking-tighter">{countdown.minutes}</span>
+                          <span className={`text-5xl font-bold tracking-tighter ${countdown.hours === 0 && countdown.minutes === 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                            {String(countdown.minutes).padStart(2, '0')}
+                          </span>
                           <span className="text-lg font-medium text-muted-foreground">m</span>
                         </div>
                       </div>
